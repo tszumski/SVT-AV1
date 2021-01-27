@@ -127,22 +127,67 @@ static AOM_FORCE_INLINE int32_t xx_mask_and_hadd(__m256i vsum, int i) {
     return _mm_extract_epi32(v128a, 0);
 }
 
-static AOM_FORCE_INLINE __m256 exp_256_ps(__m256 _x) {
-    float buff[8];
-    _mm256_storeu_ps(buff, _x);
+/***************************************************************************************************
+* Visual studio 2019 in Release/RelWithDebInfo is replacing pair of 2 instruction
+* _mm256_mul_ps() and _mm256_add_ps() into one _mm256_fmadd_ps().
+* This instruction is faster but produce different results. There is no equivalent
+* in standard C asm, so we cannot use it. I created test --gtest_filter="*exponent_approximation*"
+* that compare this kernel with its C equivalent expf_c().
+* The only work-aroud is to disable optimization when msvc compiler is used.
+* Before commiting changes in this kernel, please make sure that UT is passing
+***************************************************************************************************/
+#if defined(_MSC_VER)
+#pragma optimize("", off)
+#endif
+__m256 exp_256_ps(__m256 _x) {
+    __m256  t, f, p, r;
+    __m256i i, j;
 
-    buff[0] = expf(buff[0]);
-    buff[1] = expf(buff[1]);
-    buff[2] = expf(buff[2]);
-    buff[3] = expf(buff[3]);
-    buff[4] = expf(buff[4]);
-    buff[5] = expf(buff[5]);
-    buff[6] = expf(buff[6]);
-    buff[7] = expf(buff[7]);
+    const __m256 l2e = _mm256_set1_ps(1.442695041f); /* log2(e) */
+    const __m256 l2h = _mm256_set1_ps(-6.93145752e-1f); /* -log(2)_hi */
+    const __m256 l2l = _mm256_set1_ps(-1.42860677e-6f); /* -log(2)_lo */
+    /* coefficients for core approximation to exp() in [-log(2)/2, log(2)/2] */
+    const __m256 c0 = _mm256_set1_ps(0.008301110f);
+    const __m256 c1 = _mm256_set1_ps(0.041906696f);
+    const __m256 c2 = _mm256_set1_ps(0.166674897f);
+    const __m256 c3 = _mm256_set1_ps(0.499990642f);
+    const __m256 c4 = _mm256_set1_ps(0.999999762f);
+    const __m256 c5 = _mm256_set1_ps(1.000000000f);
 
-    __m256 res = _mm256_loadu_ps(buff);
-    return res;
+    /* exp(x) = 2^i * e^f; i = rint (log2(e) * x), f = x - log(2) * i */
+    t = _mm256_mul_ps(_x, l2e); /* t = log2(e) * x */
+    r = _mm256_round_ps(t, _MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC); /* r = rint (t) */
+
+    p = _mm256_mul_ps(r, l2h); /* log(2)_hi * r */
+    f = _mm256_add_ps(_x, p); /* x - log(2)_hi * r */
+    p = _mm256_mul_ps(r, l2l); /* log(2)_lo * r */
+    f = _mm256_add_ps(f, p); /* f = x - log(2)_hi * r - log(2)_lo * r */
+
+    i = _mm256_cvtps_epi32(t); /* i = (int)rint(t) */
+
+    /* p ~= exp (f), -log(2)/2 <= f <= log(2)/2 */
+    p = c0; /* c0 */
+
+    p = _mm256_mul_ps(p, f); /* c0*f */
+    p = _mm256_add_ps(p, c1); /* c0*f+c1 */
+    p = _mm256_mul_ps(p, f); /* (c0*f+c1)*f */
+    p = _mm256_add_ps(p, c2); /* (c0*f+c1)*f+c2 */
+    p = _mm256_mul_ps(p, f); /* ((c0*f+c1)*f+c2)*f */
+    p = _mm256_add_ps(p, c3); /* ((c0*f+c1)*f+c2)*f+c3 */
+    p = _mm256_mul_ps(p, f); /* (((c0*f+c1)*f+c2)*f+c3)*f */
+    p = _mm256_add_ps(p, c4); /* (((c0*f+c1)*f+c2)*f+c3)*f+c4 ~= exp(f) */
+    p = _mm256_mul_ps(p, f); /* (((c0*f+c1)*f+c2)*f+c3)*f */
+    p = _mm256_add_ps(p, c5); /* (((c0*f+c1)*f+c2)*f+c3)*f+c4 ~= exp(f) */
+
+    /* exp(x) = 2^i * p */
+    j = _mm256_slli_epi32(i, 23); /* i << 23 */
+    r = _mm256_castsi256_ps(_mm256_add_epi32(j, _mm256_castps_si256(p))); /* r = p * 2^i */
+
+    return r;
 }
+#if defined(_MSC_VER)
+#pragma optimize("", on)
+#endif
 
 static void apply_temporal_filter_planewise(struct MeContext *context_ptr, const uint8_t *frame1,
                                             const unsigned int stride, const uint8_t *frame2,

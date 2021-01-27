@@ -16,6 +16,7 @@
 #include "random.h"
 #include "EbUtility.h"
 #include "EbUnitTestUtility.h"
+#include <immintrin.h>
 
 
 
@@ -859,3 +860,29 @@ INSTANTIATE_TEST_CASE_P(
     ::testing::Combine(
         ::testing::Values(svt_av1_apply_temporal_filter_planewise_hbd_c),
         ::testing::Values(svt_av1_apply_temporal_filter_planewise_hbd_avx2)));
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+__m256 exp_256_ps(__m256 _x);
+float expf_c(float _x);
+#ifdef __cplusplus
+}
+#endif
+
+float exp_256_ps_wrapper(float val) {
+    __m256 simd = exp_256_ps(_mm256_set1_ps(val));
+    return _mm_cvtss_f32(_mm256_castps256_ps128(simd));
+}
+
+TEST(exponent_approximation, AVX2) {
+    for (int i = 0; i < 1000; ++i) {
+        float val = -1.0f + ((float)i) * 1.0f / 1000.0f;
+
+        float simd_res = exp_256_ps_wrapper(val);
+        float c_res = expf_c(val);
+
+        EXPECT_EQ(simd_res, c_res);
+
+    }
+}
