@@ -23,10 +23,7 @@ extern const int8_t *eb_inv_txfm_shift_ls[];
 const int32_t *      cospi_arr(int32_t n);
 const int32_t *      sinpi_arr(int32_t n);
 
-#define ZERO (uint8_t)0U
 #define ONE (uint8_t)1U
-#define TWO (uint8_t)2U
-#define THREE (uint8_t)3U
 
 typedef void (*inv_transform_1d_avx512)(__m512i *in, __m512i *out, const int8_t bit,
                                         int32_t num_cols);
@@ -44,7 +41,8 @@ typedef void (*inv_transform_1d_avx512)(__m512i *in, __m512i *out, const int8_t 
         y3 = _mm512_unpackhi_epi64(u1, u3);                  \
     } while (0)
 
-static INLINE void transpose_16x16_avx512(int32_t stride, const __m512i *in, __m512i *out) {
+static AOM_FORCE_INLINE void transpose_16x16_avx512(int32_t stride, const __m512i *in,
+                                                    __m512i *out) {
     __m512i out1[16];
     TRANSPOSE_4X4_AVX512(in[0 * stride],
                          in[1 * stride],
@@ -82,115 +80,96 @@ static INLINE void transpose_16x16_avx512(int32_t stride, const __m512i *in, __m
     __m128i *outptr = (__m128i *)(out + 0 * stride);
 
     //will get first row of transpose matrix from corresponding 4 vectors in out1
-    outptr[0] = _mm512_extracti32x4_epi32(out1[0], ZERO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[4], ZERO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[8], ZERO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[12], ZERO);
+    outptr[0] = _mm512_castsi512_si128(out1[0]);
+    outptr[1] = _mm512_castsi512_si128(out1[4]);
+    outptr[2] = _mm512_castsi512_si128(out1[8]);
+    outptr[3] = _mm512_castsi512_si128(out1[12]);
 
     //will get second row of transpose matrix from corresponding 4 vectors in out1
     outptr    = (__m128i *)(out + 1 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[1], ZERO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[5], ZERO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[9], ZERO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[13], ZERO);
+    outptr[0] = _mm512_castsi512_si128(out1[1]);
+    outptr[1] = _mm512_castsi512_si128(out1[5]);
+    outptr[2] = _mm512_castsi512_si128(out1[9]);
+    outptr[3] = _mm512_castsi512_si128(out1[13]);
 
     //will get 3rd row of transpose matrix from corresponding 4 vectors in out1
     outptr    = (__m128i *)(out + 2 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[2], ZERO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[6], ZERO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[10], ZERO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[14], ZERO);
+    outptr[0] = _mm512_castsi512_si128(out1[2]);
+    outptr[1] = _mm512_castsi512_si128(out1[6]);
+    outptr[2] = _mm512_castsi512_si128(out1[10]);
+    outptr[3] = _mm512_castsi512_si128(out1[14]);
 
     //will get 4th row of transpose matrix from corresponding 4 vectors in out1
     outptr    = (__m128i *)(out + 3 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[3], ZERO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[7], ZERO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[11], ZERO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[15], ZERO);
+    outptr[0] = _mm512_castsi512_si128(out1[3]);
+    outptr[1] = _mm512_castsi512_si128(out1[7]);
+    outptr[2] = _mm512_castsi512_si128(out1[11]);
+    outptr[3] = _mm512_castsi512_si128(out1[15]);
+
+    const __m512i idx_1 = _mm512_setr_epi64(2, 3, 10, 11, 0, 0, 0, 0);
+    const __m512i idx_2 = _mm512_setr_epi64(4, 5, 12, 13, 0, 0, 0, 0);
+    const __m512i idx_3 = _mm512_setr_epi64(6, 7, 14, 15, 0, 0, 0, 0);
 
     //will get 5th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 4 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[0], ONE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[4], ONE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[8], ONE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[12], ONE);
+    __m256i *outptr256 = (__m256i *)(out + 4 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_1, out1[4]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_1, out1[12]));
+
 
     //will get 6th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 5 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[1], ONE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[5], ONE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[9], ONE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[13], ONE);
+    outptr256 = (__m256i *)(out + 5 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_1, out1[5]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_1, out1[13]));
 
     //will get 7th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 6 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[2], ONE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[6], ONE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[10], ONE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[14], ONE);
+    outptr256    = (__m256i *)(out + 6 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_1, out1[6]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_1, out1[14]));
 
     //will get 8th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 7 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[3], ONE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[7], ONE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[11], ONE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[15], ONE);
+    outptr256    = (__m256i *)(out + 7 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_1, out1[7]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_1, out1[15]));
 
     //will get 9th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 8 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[0], TWO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[4], TWO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[8], TWO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[12], TWO);
+    outptr256           = (__m256i *)(out + 8 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_2, out1[4]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_2, out1[12]));
 
     //will get 10th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 9 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[1], TWO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[5], TWO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[9], TWO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[13], TWO);
+    outptr256    = (__m256i *)(out + 9 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_2, out1[5]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_2, out1[13]));
 
     //will get 11th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 10 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[2], TWO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[6], TWO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[10], TWO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[14], TWO);
+    outptr256    = (__m256i *)(out + 10 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_2, out1[6]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_2, out1[14]));
 
     //will get 12th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 11 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[3], TWO);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[7], TWO);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[11], TWO);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[15], TWO);
+    outptr256    = (__m256i *)(out + 11 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_2, out1[7]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_2, out1[15]));
 
     //will get 13th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 12 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[0], THREE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[4], THREE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[8], THREE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[12], THREE);
+    outptr256           = (__m256i *)(out + 12 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_3, out1[4]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_3, out1[12]));
 
     //will get 14th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 13 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[1], THREE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[5], THREE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[9], THREE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[13], THREE);
+    outptr256    = (__m256i *)(out + 13 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_3, out1[5]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_3, out1[13]));
 
     //will get 15th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 14 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[2], THREE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[6], THREE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[10], THREE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[14], THREE);
+    outptr256    = (__m256i *)(out + 14 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_3, out1[6]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_3, out1[14]));
 
     //will get 16th row of transpose matrix from corresponding 4 vectors in out1
-    outptr    = (__m128i *)(out + 15 * stride);
-    outptr[0] = _mm512_extracti32x4_epi32(out1[3], THREE);
-    outptr[1] = _mm512_extracti32x4_epi32(out1[7], THREE);
-    outptr[2] = _mm512_extracti32x4_epi32(out1[11], THREE);
-    outptr[3] = _mm512_extracti32x4_epi32(out1[15], THREE);
+    outptr256    = (__m256i *)(out + 15 * stride);
+    outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_3, out1[7]));
+    outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_3, out1[15]));
 }
 
 static void load_buffer_64x64_lower_32x32_avx512(const int32_t *coeff, __m512i *in) {
@@ -799,15 +778,15 @@ static INLINE void write_buffer_16x16_avx512_new(__m512i *in, uint16_t *output_r
 
         v0 = _mm512_add_epi32(v0, u1);
 
-        a  = _mm512_extracti64x4_epi64(v0, ZERO);
+        a  = _mm512_castsi512_si256(v0);
         b  = _mm512_extracti64x4_epi64(v0, ONE);
-        p  = _mm256_extracti128_si256(a, ZERO);
+        p  = _mm256_castsi256_si128(a);
         q  = _mm256_extracti128_si256(a, ONE);
-        r  = _mm256_extracti128_si256(b, ZERO);
+        r  = _mm256_castsi256_si128(b);
         s  = _mm256_extracti128_si256(b, ONE);
         p  = _mm_packus_epi32(p, q);
         r  = _mm_packus_epi32(r, s);
-        u0 = _mm256_insertf128_si256(u0, p, ZERO);
+        u0 = _mm256_castsi128_si256(p);
         u0 = _mm256_insertf128_si256(u0, r, ONE);
         u0 = highbd_clamp_epi16_avx512(u0, bd);
 
@@ -1152,60 +1131,60 @@ static INLINE void iadst16_col_avx512(__m512i *in, __m512i *out, const int8_t co
     tmp[14] = half_btf_avx512(&cospi32, &tmp2[14], &cospi32, &tmp2[15], &rounding, cos_bit);
 
     //stage 9
-    temp1  = _mm512_extracti64x4_epi64(tmp2[8], ZERO);
+    temp1  = _mm512_castsi512_si256(tmp2[8]);
     temp2  = _mm512_extracti64x4_epi64(tmp2[8], ONE);
     temp1  = _mm256_sign_epi32(temp1, negative);
     temp2  = _mm256_sign_epi32(temp2, negative);
-    out[1] = _mm512_inserti64x4(out[1], temp1, ZERO);
+    out[1] = _mm512_castsi256_si512(temp1);
     out[1] = _mm512_inserti64x4(out[1], temp2, ONE);
 
-    temp1  = _mm512_extracti64x4_epi64(tmp2[4], ZERO);
+    temp1  = _mm512_castsi512_si256(tmp2[4]);
     temp2  = _mm512_extracti64x4_epi64(tmp2[4], ONE);
     temp1  = _mm256_sign_epi32(temp1, negative);
     temp2  = _mm256_sign_epi32(temp2, negative);
-    out[3] = _mm512_inserti64x4(out[3], temp1, ZERO);
+    out[3] = _mm512_castsi256_si512(temp1);
     out[3] = _mm512_inserti64x4(out[3], temp2, ONE);
 
-    temp1  = _mm512_extracti64x4_epi64(tmp[14], ZERO);
+    temp1  = _mm512_castsi512_si256(tmp[14]);
     temp2  = _mm512_extracti64x4_epi64(tmp[14], ONE);
     temp1  = _mm256_sign_epi32(temp1, negative);
     temp2  = _mm256_sign_epi32(temp2, negative);
-    out[5] = _mm512_inserti64x4(out[5], temp1, ZERO);
+    out[5] = _mm512_castsi256_si512(temp1);
     out[5] = _mm512_inserti64x4(out[5], temp2, ONE);
 
-    temp1  = _mm512_extracti64x4_epi64(tmp[2], ZERO);
+    temp1  = _mm512_castsi512_si256(tmp[2]);
     temp2  = _mm512_extracti64x4_epi64(tmp[2], ONE);
     temp1  = _mm256_sign_epi32(temp1, negative);
     temp2  = _mm256_sign_epi32(temp2, negative);
-    out[7] = _mm512_inserti64x4(out[7], temp1, ZERO);
+    out[7] = _mm512_castsi256_si512(temp1);
     out[7] = _mm512_inserti64x4(out[7], temp2, ONE);
 
-    temp1  = _mm512_extracti64x4_epi64(tmp[11], ZERO);
+    temp1  = _mm512_castsi512_si256(tmp[11]);
     temp2  = _mm512_extracti64x4_epi64(tmp[11], ONE);
     temp1  = _mm256_sign_epi32(temp1, negative);
     temp2  = _mm256_sign_epi32(temp2, negative);
-    out[9] = _mm512_inserti64x4(out[9], temp1, ZERO);
+    out[9] = _mm512_castsi256_si512(temp1);
     out[9] = _mm512_inserti64x4(out[9], temp2, ONE);
 
-    temp1   = _mm512_extracti64x4_epi64(tmp[7], ZERO);
+    temp1   = _mm512_castsi512_si256(tmp[7]);
     temp2   = _mm512_extracti64x4_epi64(tmp[7], ONE);
     temp1   = _mm256_sign_epi32(temp1, negative);
     temp2   = _mm256_sign_epi32(temp2, negative);
-    out[11] = _mm512_inserti64x4(out[11], temp1, ZERO);
+    out[11] = _mm512_castsi256_si512(temp1);
     out[11] = _mm512_inserti64x4(out[11], temp2, ONE);
 
-    temp1   = _mm512_extracti64x4_epi64(tmp2[13], ZERO);
+    temp1   = _mm512_castsi512_si256(tmp2[13]);
     temp2   = _mm512_extracti64x4_epi64(tmp2[13], ONE);
     temp1   = _mm256_sign_epi32(temp1, negative);
     temp2   = _mm256_sign_epi32(temp2, negative);
-    out[13] = _mm512_inserti64x4(out[13], temp1, ZERO);
+    out[13] = _mm512_castsi256_si512(temp1);
     out[13] = _mm512_inserti64x4(out[13], temp2, ONE);
 
-    temp1   = _mm512_extracti64x4_epi64(tmp2[1], ZERO);
+    temp1   = _mm512_castsi512_si256(tmp2[1]);
     temp2   = _mm512_extracti64x4_epi64(tmp2[1], ONE);
     temp1   = _mm256_sign_epi32(temp1, negative);
     temp2   = _mm256_sign_epi32(temp2, negative);
-    out[15] = _mm512_inserti64x4(out[15], temp1, ZERO);
+    out[15] = _mm512_castsi256_si512(temp1);
     out[15] = _mm512_inserti64x4(out[15], temp2, ONE);
 }
 
@@ -2636,7 +2615,7 @@ void iidtx32_avx512(__m512i *input, __m512i *output, const int8_t cos_bit, int32
     }
 }
 
-static INLINE void transpose_16nx16m_inv_avx512(const __m512i *in, __m512i *out,
+static AOM_FORCE_INLINE void transpose_16nx16m_inv_avx512(const __m512i *in, __m512i *out,
                                                 const int32_t width, const int32_t height) {
     const int32_t numcol = height >> 4;
     const int32_t numrow = width >> 4;
@@ -2678,118 +2657,99 @@ static INLINE void transpose_16nx16m_inv_avx512(const __m512i *in, __m512i *out,
                                  out1[14],
                                  out1[15]);
 
-            __m128i *outptr = (__m128i *)(out + (j * height + i + (numcol * 0)));
+                __m128i *outptr = (__m128i *)(out + (j * height + i + (numcol * 0)));
 
-            //will get first row of transpose matrix from corresponding 4 vectors in out1
-            outptr[0] = _mm512_extracti32x4_epi32(out1[0], ZERO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[4], ZERO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[8], ZERO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[12], ZERO);
+                //will get first row of transpose matrix from corresponding 4 vectors in out1
+                outptr[0] = _mm512_castsi512_si128(out1[0]);
+                outptr[1] = _mm512_castsi512_si128(out1[4]);
+                outptr[2] = _mm512_castsi512_si128(out1[8]);
+                outptr[3] = _mm512_castsi512_si128(out1[12]);
 
-            //will get second row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 1)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[1], ZERO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[5], ZERO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[9], ZERO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[13], ZERO);
+                //will get second row of transpose matrix from corresponding 4 vectors in out1
+                outptr    = (__m128i *)(out + (j * height + i + (numcol * 1)));
+                outptr[0] = _mm512_castsi512_si128(out1[1]);
+                outptr[1] = _mm512_castsi512_si128(out1[5]);
+                outptr[2] = _mm512_castsi512_si128(out1[9]);
+                outptr[3] = _mm512_castsi512_si128(out1[13]);
 
-            //will get 3rd row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 2)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[2], ZERO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[6], ZERO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[10], ZERO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[14], ZERO);
+                //will get 3rd row of transpose matrix from corresponding 4 vectors in out1
+                outptr    = (__m128i *)(out + (j * height + i + (numcol * 2)));
+                outptr[0] = _mm512_castsi512_si128(out1[2]);
+                outptr[1] = _mm512_castsi512_si128(out1[6]);
+                outptr[2] = _mm512_castsi512_si128(out1[10]);
+                outptr[3] = _mm512_castsi512_si128(out1[14]);
 
-            //will get 4th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 3)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[3], ZERO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[7], ZERO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[11], ZERO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[15], ZERO);
+                //will get 4th row of transpose matrix from corresponding 4 vectors in out1
+                outptr    = (__m128i *)(out + (j * height + i + (numcol * 3)));
+                outptr[0] = _mm512_castsi512_si128(out1[3]);
+                outptr[1] = _mm512_castsi512_si128(out1[7]);
+                outptr[2] = _mm512_castsi512_si128(out1[11]);
+                outptr[3] = _mm512_castsi512_si128(out1[15]);
 
-            //will get 5th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 4)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[0], ONE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[4], ONE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[8], ONE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[12], ONE);
+                const __m512i idx_1 = _mm512_setr_epi64(2, 3, 10, 11, 0, 0, 0, 0);
+                const __m512i idx_2 = _mm512_setr_epi64(4, 5, 12, 13, 0, 0, 0, 0);
+                const __m512i idx_3 = _mm512_setr_epi64(6, 7, 14, 15, 0, 0, 0, 0);
 
-            //will get 6th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 5)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[1], ONE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[5], ONE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[9], ONE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[13], ONE);
+                //will get 5th row of transpose matrix from corresponding 4 vectors in out1
+                __m256i *outptr256 = (__m256i *)(out + (j * height + i + (numcol * 4)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_1, out1[4]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_1, out1[12]));
 
-            //will get 7th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 6)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[2], ONE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[6], ONE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[10], ONE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[14], ONE);
 
-            //will get 8th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 7)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[3], ONE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[7], ONE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[11], ONE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[15], ONE);
+                //will get 6th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 5)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_1, out1[5]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_1, out1[13]));
 
-            //will get 9th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 8)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[0], TWO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[4], TWO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[8], TWO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[12], TWO);
+                //will get 7th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 6)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_1, out1[6]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_1, out1[14]));
 
-            //will get 10th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 9)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[1], TWO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[5], TWO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[9], TWO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[13], TWO);
+                //will get 8th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 7)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_1, out1[7]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_1, out1[15]));
 
-            //will get 11th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 10)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[2], TWO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[6], TWO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[10], TWO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[14], TWO);
+                //will get 9th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 8)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_2, out1[4]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_2, out1[12]));
 
-            //will get 12th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 11)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[3], TWO);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[7], TWO);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[11], TWO);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[15], TWO);
+                //will get 10th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 9)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_2, out1[5]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_2, out1[13]));
 
-            //will get 13th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 12)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[0], THREE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[4], THREE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[8], THREE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[12], THREE);
+                //will get 11th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 10)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_2, out1[6]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_2, out1[14]));
 
-            //will get 14th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 13)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[1], THREE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[5], THREE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[9], THREE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[13], THREE);
+                //will get 12th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 11)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_2, out1[7]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_2, out1[15]));
 
-            //will get 15th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 14)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[2], THREE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[6], THREE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[10], THREE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[14], THREE);
+                //will get 13th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 12)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[0], idx_3, out1[4]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[8], idx_3, out1[12]));
 
-            //will get 16th row of transpose matrix from corresponding 4 vectors in out1
-            outptr    = (__m128i *)(out + (j * height + i + (numcol * 15)));
-            outptr[0] = _mm512_extracti32x4_epi32(out1[3], THREE);
-            outptr[1] = _mm512_extracti32x4_epi32(out1[7], THREE);
-            outptr[2] = _mm512_extracti32x4_epi32(out1[11], THREE);
-            outptr[3] = _mm512_extracti32x4_epi32(out1[15], THREE);
+                //will get 14th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 13)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[1], idx_3, out1[5]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[9], idx_3, out1[13]));
+
+                //will get 15th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 14)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[2], idx_3, out1[6]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[10], idx_3, out1[14]));
+
+                //will get 16th row of transpose matrix from corresponding 4 vectors in out1
+                outptr256    = (__m256i *)(out + (j * height + i + (numcol * 15)));
+                outptr256[0] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[3], idx_3, out1[7]));
+                outptr256[1] = _mm512_castsi512_si256(_mm512_permutex2var_epi64(out1[11], idx_3, out1[15]));
         }
     }
 }
