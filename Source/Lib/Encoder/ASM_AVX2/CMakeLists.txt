@@ -23,6 +23,7 @@ include_directories(../../../API
 link_directories(${PROJECT_SOURCE_DIR}/Source/Lib/Encoder/ASM_SSSE3/)
 
 check_both_flags_add(-mavx2)
+check_both_flags_add(-mfma)
 
 if(CMAKE_C_COMPILER_ID STREQUAL "Intel")
     if(WIN32)

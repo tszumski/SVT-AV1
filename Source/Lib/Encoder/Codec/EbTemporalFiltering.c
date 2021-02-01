@@ -644,26 +644,19 @@ float expf_c(float _x) {
     t = _x * l2e; /* t = log2(e) * x */
     r = rintf(t);
 
-    p = r * l2h; /* log(2)_hi * r */
-    f = _x + p; /* x - log(2)_hi * r */
-    p = r * l2l; /* log(2)_lo * r */
-    f = f + p; /* f = x - log(2)_hi * r - log(2)_lo * r */
+    f = (float)((double)(r) * l2h +_x);
+    f = (float)((double)(r) * l2l + f);
 
     i = (int32_t)rint(t);
 
     /* p ~= exp (f), -log(2)/2 <= f <= log(2)/2 */
     p = c0; /* c0 */
 
-    p = p * f; /* c0*f */
-    p = p + c1; /* c0*f+c1 */
-    p = p * f; /* (c0*f+c1)*f */
-    p = p + c2; /* (c0*f+c1)*f+c2 */
-    p = p * f; /* ((c0*f+c1)*f+c2)*f */
-    p = p + c3; /* ((c0*f+c1)*f+c2)*f+c3 */
-    p = p * f; /* (((c0*f+c1)*f+c2)*f+c3)*f */
-    p = p + c4; /* (((c0*f+c1)*f+c2)*f+c3)*f+c4 ~= exp(f) */
-    p = p * f; /* (((c0*f+c1)*f+c2)*f+c3)*f */
-    p = p + c5; /* (((c0*f+c1)*f+c2)*f+c3)*f+c4 ~= exp(f) */
+    p = (float)((double)(p) * f + c1);
+    p = (float)((double)(p) * f + c2);
+    p = (float)((double)(p) * f + c3);
+    p = (float)((double)(p) * f + c4);
+    p = (float)((double)(p) * f + c5);
 
     /* exp(x) = 2^i * p */
     j = i << 23; /* i << 23 */
