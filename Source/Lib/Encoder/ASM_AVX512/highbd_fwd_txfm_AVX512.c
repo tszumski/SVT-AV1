@@ -316,31 +316,19 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
     int32_t col;
 
     for (col = 0; col < col_num; ++col) {
-        // stage 0
         // stage 1
-        u[0]  = in[0 * col_num + col];
         u[1]  = _mm512_sub_epi32(zeroes, in[15 * col_num + col]);
         u[2]  = _mm512_sub_epi32(zeroes, in[7 * col_num + col]);
-        u[3]  = in[8 * col_num + col];
         u[4]  = _mm512_sub_epi32(zeroes, in[3 * col_num + col]);
-        u[5]  = in[12 * col_num + col];
-        u[6]  = in[4 * col_num + col];
         u[7]  = _mm512_sub_epi32(zeroes, in[11 * col_num + col]);
         u[8]  = _mm512_sub_epi32(zeroes, in[1 * col_num + col]);
-        u[9]  = in[14 * col_num + col];
-        u[10] = in[6 * col_num + col];
         u[11] = _mm512_sub_epi32(zeroes, in[9 * col_num + col]);
-        u[12] = in[2 * col_num + col];
         u[13] = _mm512_sub_epi32(zeroes, in[13 * col_num + col]);
         u[14] = _mm512_sub_epi32(zeroes, in[5 * col_num + col]);
-        u[15] = in[10 * col_num + col];
 
         // stage 2
-        v[0] = u[0];
-        v[1] = u[1];
-
         x    = _mm512_mullo_epi32(u[2], cospi32);
-        y    = _mm512_mullo_epi32(u[3], cospi32);
+        y    = _mm512_mullo_epi32(in[8 * col_num + col], cospi32);
         v[2] = _mm512_add_epi32(x, y);
         v[2] = _mm512_add_epi32(v[2], rnding);
         v[2] = _mm512_srai_epi32(v[2], (uint8_t)bit);
@@ -349,10 +337,7 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
         v[3] = _mm512_add_epi32(v[3], rnding);
         v[3] = _mm512_srai_epi32(v[3], (uint8_t)bit);
 
-        v[4] = u[4];
-        v[5] = u[5];
-
-        x    = _mm512_mullo_epi32(u[6], cospi32);
+        x    = _mm512_mullo_epi32(in[4 * col_num + col], cospi32);
         y    = _mm512_mullo_epi32(u[7], cospi32);
         v[6] = _mm512_add_epi32(x, y);
         v[6] = _mm512_add_epi32(v[6], rnding);
@@ -362,10 +347,7 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
         v[7] = _mm512_add_epi32(v[7], rnding);
         v[7] = _mm512_srai_epi32(v[7], (uint8_t)bit);
 
-        v[8] = u[8];
-        v[9] = u[9];
-
-        x     = _mm512_mullo_epi32(u[10], cospi32);
+        x     = _mm512_mullo_epi32(in[6 * col_num + col], cospi32);
         y     = _mm512_mullo_epi32(u[11], cospi32);
         v[10] = _mm512_add_epi32(x, y);
         v[10] = _mm512_add_epi32(v[10], rnding);
@@ -375,11 +357,8 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
         v[11] = _mm512_add_epi32(v[11], rnding);
         v[11] = _mm512_srai_epi32(v[11], (uint8_t)bit);
 
-        v[12] = u[12];
-        v[13] = u[13];
-
         x     = _mm512_mullo_epi32(u[14], cospi32);
-        y     = _mm512_mullo_epi32(u[15], cospi32);
+        y     = _mm512_mullo_epi32(in[10 * col_num + col], cospi32);
         v[14] = _mm512_add_epi32(x, y);
         v[14] = _mm512_add_epi32(v[14], rnding);
         v[14] = _mm512_srai_epi32(v[14], (uint8_t)bit);
@@ -389,68 +368,52 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
         v[15] = _mm512_srai_epi32(v[15], (uint8_t)bit);
 
         // stage 3
-        u[0]  = _mm512_add_epi32(v[0], v[2]);
-        u[1]  = _mm512_add_epi32(v[1], v[3]);
-        u[2]  = _mm512_sub_epi32(v[0], v[2]);
-        u[3]  = _mm512_sub_epi32(v[1], v[3]);
-        u[4]  = _mm512_add_epi32(v[4], v[6]);
-        u[5]  = _mm512_add_epi32(v[5], v[7]);
-        u[6]  = _mm512_sub_epi32(v[4], v[6]);
-        u[7]  = _mm512_sub_epi32(v[5], v[7]);
-        u[8]  = _mm512_add_epi32(v[8], v[10]);
-        u[9]  = _mm512_add_epi32(v[9], v[11]);
-        u[10] = _mm512_sub_epi32(v[8], v[10]);
-        u[11] = _mm512_sub_epi32(v[9], v[11]);
-        u[12] = _mm512_add_epi32(v[12], v[14]);
-        u[13] = _mm512_add_epi32(v[13], v[15]);
-        u[14] = _mm512_sub_epi32(v[12], v[14]);
-        u[15] = _mm512_sub_epi32(v[13], v[15]);
+        u[0]  = _mm512_add_epi32(in[0 * col_num + col], v[2]);
+        u[3]  = _mm512_sub_epi32(u[1], v[3]);
+        u[1]  = _mm512_add_epi32(u[1], v[3]);
+        u[2]  = _mm512_sub_epi32(in[0 * col_num + col], v[2]);
+        u[6]  = _mm512_sub_epi32(u[4], v[6]);
+        u[4]  = _mm512_add_epi32(u[4], v[6]);
+        u[5]  = _mm512_add_epi32(in[12 * col_num + col], v[7]);
+        u[7]  = _mm512_sub_epi32(in[12 * col_num + col], v[7]);
+        u[10] = _mm512_sub_epi32(u[8], v[10]);
+        u[8]  = _mm512_add_epi32(u[8], v[10]);
+        u[9]  = _mm512_add_epi32(in[14 * col_num + col], v[11]);
+        u[11] = _mm512_sub_epi32(in[14 * col_num + col], v[11]);
+        u[12] = _mm512_add_epi32(in[2 * col_num + col], v[14]);
+        u[15] = _mm512_sub_epi32(u[13], v[15]);
+        u[13] = _mm512_add_epi32(u[13], v[15]);
+        u[14] = _mm512_sub_epi32(in[2 * col_num + col], v[14]);
 
         // stage 4
-        v[0]  = u[0];
-        v[1]  = u[1];
-        v[2]  = u[2];
-        v[3]  = u[3];
         v[4]  = half_btf_avx512(&cospi16, &u[4], &cospi48, &u[5], &rnding, bit);
         v[5]  = half_btf_avx512(&cospi48, &u[4], &cospim16, &u[5], &rnding, bit);
         v[6]  = half_btf_avx512(&cospim48, &u[6], &cospi16, &u[7], &rnding, bit);
         v[7]  = half_btf_avx512(&cospi16, &u[6], &cospi48, &u[7], &rnding, bit);
-        v[8]  = u[8];
-        v[9]  = u[9];
-        v[10] = u[10];
-        v[11] = u[11];
         v[12] = half_btf_avx512(&cospi16, &u[12], &cospi48, &u[13], &rnding, bit);
         v[13] = half_btf_avx512(&cospi48, &u[12], &cospim16, &u[13], &rnding, bit);
         v[14] = half_btf_avx512(&cospim48, &u[14], &cospi16, &u[15], &rnding, bit);
         v[15] = half_btf_avx512(&cospi16, &u[14], &cospi48, &u[15], &rnding, bit);
 
         // stage 5
-        u[0]  = _mm512_add_epi32(v[0], v[4]);
-        u[1]  = _mm512_add_epi32(v[1], v[5]);
-        u[2]  = _mm512_add_epi32(v[2], v[6]);
-        u[3]  = _mm512_add_epi32(v[3], v[7]);
-        u[4]  = _mm512_sub_epi32(v[0], v[4]);
-        u[5]  = _mm512_sub_epi32(v[1], v[5]);
-        u[6]  = _mm512_sub_epi32(v[2], v[6]);
-        u[7]  = _mm512_sub_epi32(v[3], v[7]);
-        u[8]  = _mm512_add_epi32(v[8], v[12]);
-        u[9]  = _mm512_add_epi32(v[9], v[13]);
-        u[10] = _mm512_add_epi32(v[10], v[14]);
-        u[11] = _mm512_add_epi32(v[11], v[15]);
-        u[12] = _mm512_sub_epi32(v[8], v[12]);
-        u[13] = _mm512_sub_epi32(v[9], v[13]);
-        u[14] = _mm512_sub_epi32(v[10], v[14]);
-        u[15] = _mm512_sub_epi32(v[11], v[15]);
+        u[4]  = _mm512_sub_epi32(u[0], v[4]);
+        u[0]  = _mm512_add_epi32(u[0], v[4]);
+        u[5]  = _mm512_sub_epi32(u[1], v[5]);
+        u[1]  = _mm512_add_epi32(u[1], v[5]);
+        u[6]  = _mm512_sub_epi32(u[2], v[6]);
+        u[2]  = _mm512_add_epi32(u[2], v[6]);
+        u[7]  = _mm512_sub_epi32(u[3], v[7]);
+        u[3]  = _mm512_add_epi32(u[3], v[7]);
+        u[12] = _mm512_sub_epi32(u[8], v[12]);
+        u[8]  = _mm512_add_epi32(u[8], v[12]);
+        u[13] = _mm512_sub_epi32(u[9], v[13]);
+        u[9]  = _mm512_add_epi32(u[9], v[13]);
+        u[14] = _mm512_sub_epi32(u[10], v[14]);
+        u[10] = _mm512_add_epi32(u[10], v[14]);
+        u[15] = _mm512_sub_epi32(u[11], v[15]);
+        u[11] = _mm512_add_epi32(u[11], v[15]);
 
         // stage 6
-        v[0]  = u[0];
-        v[1]  = u[1];
-        v[2]  = u[2];
-        v[3]  = u[3];
-        v[4]  = u[4];
-        v[5]  = u[5];
-        v[6]  = u[6];
-        v[7]  = u[7];
         v[8]  = half_btf_avx512(&cospi8, &u[8], &cospi56, &u[9], &rnding, bit);
         v[9]  = half_btf_avx512(&cospi56, &u[8], &cospim8, &u[9], &rnding, bit);
         v[10] = half_btf_avx512(&cospi40, &u[10], &cospi24, &u[11], &rnding, bit);
@@ -461,58 +424,40 @@ static void fadst16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
         v[15] = half_btf_avx512(&cospi40, &u[14], &cospi24, &u[15], &rnding, bit);
 
         // stage 7
-        u[0]  = _mm512_add_epi32(v[0], v[8]);
-        u[1]  = _mm512_add_epi32(v[1], v[9]);
-        u[2]  = _mm512_add_epi32(v[2], v[10]);
-        u[3]  = _mm512_add_epi32(v[3], v[11]);
-        u[4]  = _mm512_add_epi32(v[4], v[12]);
-        u[5]  = _mm512_add_epi32(v[5], v[13]);
-        u[6]  = _mm512_add_epi32(v[6], v[14]);
-        u[7]  = _mm512_add_epi32(v[7], v[15]);
-        u[8]  = _mm512_sub_epi32(v[0], v[8]);
-        u[9]  = _mm512_sub_epi32(v[1], v[9]);
-        u[10] = _mm512_sub_epi32(v[2], v[10]);
-        u[11] = _mm512_sub_epi32(v[3], v[11]);
-        u[12] = _mm512_sub_epi32(v[4], v[12]);
-        u[13] = _mm512_sub_epi32(v[5], v[13]);
-        u[14] = _mm512_sub_epi32(v[6], v[14]);
-        u[15] = _mm512_sub_epi32(v[7], v[15]);
+        u[8]  = _mm512_sub_epi32(u[0], v[8]);
+        u[0]  = _mm512_add_epi32(u[0], v[8]);
+        u[9]  = _mm512_sub_epi32(u[1], v[9]);
+        u[1]  = _mm512_add_epi32(u[1], v[9]);
+        u[10] = _mm512_sub_epi32(u[2], v[10]);
+        u[2]  = _mm512_add_epi32(u[2], v[10]);
+        u[11] = _mm512_sub_epi32(u[3], v[11]);
+        u[3]  = _mm512_add_epi32(u[3], v[11]);
+        u[12] = _mm512_sub_epi32(u[4], v[12]);
+        u[4]  = _mm512_add_epi32(u[4], v[12]);
+        u[13] = _mm512_sub_epi32(u[5], v[13]);
+        u[5]  = _mm512_add_epi32(u[5], v[13]);
+        u[14] = _mm512_sub_epi32(u[6], v[14]);
+        u[6]  = _mm512_add_epi32(u[6], v[14]);
+        u[15] = _mm512_sub_epi32(u[7], v[15]);
+        u[7]  = _mm512_add_epi32(u[7], v[15]);
 
         // stage 8
-        v[0]  = half_btf_avx512(&cospi2, &u[0], &cospi62, &u[1], &rnding, bit);
-        v[1]  = half_btf_avx512(&cospi62, &u[0], &cospim2, &u[1], &rnding, bit);
-        v[2]  = half_btf_avx512(&cospi10, &u[2], &cospi54, &u[3], &rnding, bit);
-        v[3]  = half_btf_avx512(&cospi54, &u[2], &cospim10, &u[3], &rnding, bit);
-        v[4]  = half_btf_avx512(&cospi18, &u[4], &cospi46, &u[5], &rnding, bit);
-        v[5]  = half_btf_avx512(&cospi46, &u[4], &cospim18, &u[5], &rnding, bit);
-        v[6]  = half_btf_avx512(&cospi26, &u[6], &cospi38, &u[7], &rnding, bit);
-        v[7]  = half_btf_avx512(&cospi38, &u[6], &cospim26, &u[7], &rnding, bit);
-        v[8]  = half_btf_avx512(&cospi34, &u[8], &cospi30, &u[9], &rnding, bit);
-        v[9]  = half_btf_avx512(&cospi30, &u[8], &cospim34, &u[9], &rnding, bit);
-        v[10] = half_btf_avx512(&cospi42, &u[10], &cospi22, &u[11], &rnding, bit);
-        v[11] = half_btf_avx512(&cospi22, &u[10], &cospim42, &u[11], &rnding, bit);
-        v[12] = half_btf_avx512(&cospi50, &u[12], &cospi14, &u[13], &rnding, bit);
-        v[13] = half_btf_avx512(&cospi14, &u[12], &cospim50, &u[13], &rnding, bit);
-        v[14] = half_btf_avx512(&cospi58, &u[14], &cospi6, &u[15], &rnding, bit);
-        v[15] = half_btf_avx512(&cospi6, &u[14], &cospim58, &u[15], &rnding, bit);
-
-        // stage 9
-        out[0 * col_num + col]  = v[1];
-        out[1 * col_num + col]  = v[14];
-        out[2 * col_num + col]  = v[3];
-        out[3 * col_num + col]  = v[12];
-        out[4 * col_num + col]  = v[5];
-        out[5 * col_num + col]  = v[10];
-        out[6 * col_num + col]  = v[7];
-        out[7 * col_num + col]  = v[8];
-        out[8 * col_num + col]  = v[9];
-        out[9 * col_num + col]  = v[6];
-        out[10 * col_num + col] = v[11];
-        out[11 * col_num + col] = v[4];
-        out[12 * col_num + col] = v[13];
-        out[13 * col_num + col] = v[2];
-        out[14 * col_num + col] = v[15];
-        out[15 * col_num + col] = v[0];
+        out[15 * col_num + col] = half_btf_avx512(&cospi2, &u[0], &cospi62, &u[1], &rnding, bit);
+        out[0 * col_num + col]  = half_btf_avx512(&cospi62, &u[0], &cospim2, &u[1], &rnding, bit);
+        out[13 * col_num + col] = half_btf_avx512(&cospi10, &u[2], &cospi54, &u[3], &rnding, bit);
+        out[2 * col_num + col]  = half_btf_avx512(&cospi54, &u[2], &cospim10, &u[3], &rnding, bit);
+        out[11 * col_num + col] = half_btf_avx512(&cospi18, &u[4], &cospi46, &u[5], &rnding, bit);
+        out[4 * col_num + col]  = half_btf_avx512(&cospi46, &u[4], &cospim18, &u[5], &rnding, bit);
+        out[9 * col_num + col]  = half_btf_avx512(&cospi26, &u[6], &cospi38, &u[7], &rnding, bit);
+        out[6 * col_num + col]  = half_btf_avx512(&cospi38, &u[6], &cospim26, &u[7], &rnding, bit);
+        out[7 * col_num + col]  = half_btf_avx512(&cospi34, &u[8], &cospi30, &u[9], &rnding, bit);
+        out[8 * col_num + col]  = half_btf_avx512(&cospi30, &u[8], &cospim34, &u[9], &rnding, bit);
+        out[5 * col_num + col]  = half_btf_avx512(&cospi42, &u[10], &cospi22, &u[11], &rnding, bit);
+        out[10 * col_num + col] = half_btf_avx512(&cospi22, &u[10], &cospim42, &u[11], &rnding, bit);
+        out[3 * col_num + col]  = half_btf_avx512(&cospi50, &u[12], &cospi14, &u[13], &rnding, bit);
+        out[12 * col_num + col] = half_btf_avx512(&cospi14, &u[12], &cospim50, &u[13], &rnding, bit);
+        out[1 * col_num + col]  = half_btf_avx512(&cospi58, &u[14], &cospi6, &u[15], &rnding, bit);
+        out[14 * col_num + col] = half_btf_avx512(&cospi6, &u[14], &cospim58, &u[15], &rnding, bit);
     }
 }
 static void fdct16x16_avx512(const __m512i *in, __m512i *out, const int8_t bit,
